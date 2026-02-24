@@ -1,0 +1,212 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 30 20% 98%;
+    --foreground: 0 20% 15%;
+    --card: 30 15% 96%;
+    --card-foreground: 0 20% 15%;
+    --popover: 30 20% 98%;
+    --popover-foreground: 0 20% 15%;
+    --primary: 0 45% 35%;
+    --primary-foreground: 30 20% 98%;
+    --secondary: 0 20% 92%;
+    --secondary-foreground: 0 25% 20%;
+    --muted: 30 15% 94%;
+    --muted-foreground: 0 10% 45%;
+    --accent: 0 50% 40%;
+    --accent-foreground: 30 20% 98%;
+    --destructive: 0 65% 50%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 15% 88%;
+    --input: 0 15% 88%;
+    --ring: 0 45% 35%;
+    --radius: 0.625rem;
+    
+    /* Wine/Deep Red Theme Colors */
+    --wine: 0 45% 35%;
+    --wine-light: 0 40% 45%;
+    --wine-dark: 0 50% 25%;
+    --burgundy: 345 45% 30%;
+    --cream: 40 30% 96%;
+    --gold: 45 70% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Source Sans 3', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Playfair Display', Georgia, serif;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 0.5);
+}
+
+/* Literary styling with subtle pattern */
+.literary-bg {
+  background-color: hsl(var(--cream));
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%238B2942' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Wine gradient text */
+.text-gradient {
+  background: linear-gradient(135deg, hsl(var(--wine)) 0%, hsl(var(--burgundy)) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Wine gradient background */
+.wine-gradient {
+  background: linear-gradient(135deg, hsl(var(--wine)) 0%, hsl(var(--burgundy)) 100%);
+}
+
+/* Dashboard styles */
+.dashboard-card {
+  @apply bg-card rounded-lg border shadow-sm hover:shadow-md transition-shadow;
+}
+
+.stat-number {
+  @apply text-3xl font-bold text-primary;
+  font-family: 'Source Sans 3', sans-serif;
+}
+
+/* Stage progress */
+.stage-complete {
+  @apply bg-green-100 text-green-800 border-green-200;
+}
+
+.stage-current {
+  @apply bg-amber-100 text-amber-800 border-amber-200;
+}
+
+.stage-pending {
+  @apply bg-gray-100 text-gray-500 border-gray-200;
+}
+
+/* Table styles for dashboard */
+.data-table {
+  @apply w-full text-sm;
+}
+
+.data-table th {
+  @apply text-left font-medium text-muted-foreground p-3 border-b;
+}
+
+.data-table td {
+  @apply p-3 border-b;
+}
+
+.data-table tbody tr:hover {
+  @apply bg-muted/50;
+}
+
+/* Countdown timer styles */
+.countdown-box {
+  @apply bg-primary/10 rounded-lg p-3 text-center min-w-16;
+}
+
+.countdown-number {
+  @apply text-2xl font-bold text-primary;
+  font-variant-numeric: tabular-nums;
+}
+
+.countdown-label {
+  @apply text-xs text-muted-foreground uppercase tracking-wider;
+}
+
+/* Price display */
+.price-original {
+  @apply text-muted-foreground line-through text-sm;
+}
+
+.price-discounted {
+  @apply text-2xl font-bold text-primary;
+}
+
+.price-savings {
+  @apply text-sm text-green-600 font-medium;
+}
+
+/* Scroll animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.animate-delay-100 { animation-delay: 100ms; }
+.animate-delay-200 { animation-delay: 200ms; }
+.animate-delay-300 { animation-delay: 300ms; }
+.animate-delay-400 { animation-delay: 400ms; }
+
+/* Counter animation */
+@keyframes countUp {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-count-up {
+  animation: countUp 0.8s ease-out forwards;
+}
+
+/* Feature cards hover effect */
+.feature-card {
+  @apply transition-all duration-300;
+}
+
+.feature-card:hover {
+  @apply -translate-y-1 shadow-lg;
+}
+
+/* Wine button variants */
+.btn-wine {
+  @apply bg-primary text-primary-foreground hover:bg-primary/90;
+}
+
+.btn-wine-outline {
+  @apply border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground;
+}
+
+/* Review stars */
+.star-filled {
+  @apply text-yellow-500;
+}
+
+.star-empty {
+  @apply text-gray-300;
+}

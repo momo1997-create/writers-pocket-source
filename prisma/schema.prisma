@@ -1,0 +1,1055 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                  String                   @id @default(uuid())
+  authorUid           String?                  @unique
+  email               String                   @unique
+  password            String
+  name                String
+  phone               String?
+  alternateEmail      String?
+  alternatePhone      String?
+  role                UserRole                 @default(AUTHOR)
+  profileImage        String?
+  bio                 String?
+  website             String?
+  socialLinks         Json?
+  publicUrl           String?                  @unique
+  isActive            Boolean                  @default(true)
+  isBlogWriter        Boolean                  @default(false)
+  emailVerified       DateTime?
+  importSource        String?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  bankDetails         BankDetails?
+  books               Book[]                   @relation("LegacyAuthor")
+  bookAuthorships     BookAuthor[]
+  leadAssignments     Lead[]                   @relation("AssignedTo")
+  leads               Lead[]                   @relation("CreatedBy")
+  salesAssignments    Lead[]                   @relation("SalesAssignment")
+  manuscripts         Manuscript[]
+  notifications       Notification[]
+  orders              Order[]
+  stageAssignments    PublishingStage[]        @relation("AssignedTeamMember")
+  stageHistoryChanges PublishingStageHistory[] @relation("StageHistoryChangedBy")
+  queryAssignments    Query[]                  @relation("AssignedTo")
+  queries             Query[]
+  royalties           Royalty[]
+  serviceEnrollments  ServiceEnrollment[]
+
+  @@index([email])
+  @@index([role])
+  @@index([publicUrl])
+  @@index([authorUid])
+}
+
+model BankDetails {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  accountName   String
+  accountNumber String
+  bankName      String
+  ifscCode      String
+  branchName    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Book {
+  id               String             @id @default(uuid())
+  title            String
+  subtitle         String?
+  authorId         String
+  isbnPaperback    String?            @unique
+  isbnHardcover    String?            @unique
+  isbnEbook        String?
+  isbn             String?            @unique
+  description      String?
+  coverImage       String?
+  price            Float              @default(0)
+  discountPrice    Float?
+  category         String?
+  genre            String?
+  pageCount        Int?
+  publishedDate    DateTime?
+  status           BookStatus         @default(DRAFT)
+  isPublic         Boolean            @default(false)
+  isAuthorCopy     Boolean            @default(false)
+  authorCopyPrice  Float?
+  deadline         DateTime?
+  deadlineSeverity String?
+  hasPaperback     Boolean            @default(true)
+  hasHardcover     Boolean            @default(false)
+  hasEbook         Boolean            @default(false)
+  paperbackPrice   Float?
+  hardcoverPrice   Float?
+  ebookPrice       Float?
+  authorCopyTiers  Json?
+  authorCopyMOQ    Int                @default(1)
+  shippingEnabled  Boolean            @default(true)
+  isBestSeller     Boolean            @default(false)
+  bestSellerManual Boolean            @default(false)
+  salesCount       Int                @default(0)
+  importSource     String?
+  metadata         Json?
+  // Store display overrides (only shown on storefront)
+  storeDisplayTitle       String?
+  storeDisplayAuthor      String?
+  storeDisplayDescription String?
+  storeDisplayCover       String?
+  // Word document upload settings
+  allowWordUpload         Boolean            @default(false)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  author           User               @relation("LegacyAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  authors          BookAuthor[]
+  categories       BookCategory[]
+  externalLinks    BookExternalLink[]
+  manuscripts      Manuscript[]
+  orderItems       OrderItem[]
+  publishingStages PublishingStage[]
+  queries          Query[]
+  reviews          Review[]
+  royalties        Royalty[]
+  sales            Sale[]
+  royaltyConfigs   BookRoyaltyConfig[]
+
+  @@index([authorId])
+  @@index([status])
+  @@index([isPublic])
+  @@index([isbn])
+  @@index([isbnPaperback])
+  @@index([isbnHardcover])
+  @@index([isBestSeller])
+  @@index([publishedDate])
+}
+
+model BookAuthor {
+  id           String   @id @default(uuid())
+  bookId       String
+  authorId     String
+  authorUid    String?
+  isPrimary    Boolean  @default(false)
+  royaltyShare Float?
+  addedAt      DateTime @default(now())
+  addedBy      String?
+  author       User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  book         Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([bookId, authorId])
+  @@index([bookId])
+  @@index([authorId])
+  @@index([authorUid])
+}
+
+model Manuscript {
+  id              String           @id @default(uuid())
+  bookId          String
+  authorId        String
+  fileName        String
+  fileUrl         String
+  fileSize        Int?
+  fileType        String?
+  version         Int              @default(1)
+  status          ManuscriptStatus @default(UPLOADED)
+  notes           String?
+  reviewNotes     String?
+  content         Json?            // Formatter content blocks
+  formattedOutput String?          // Processed/formatted output
+  isWordUpload    Boolean          @default(false) // Whether this was a Word upload
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  author          User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  book            Book             @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@index([bookId])
+  @@index([authorId])
+  @@index([status])
+}
+
+model PublishingStage {
+  id           String                   @id @default(uuid())
+  bookId       String
+  stageType    StageType
+  stageOrder   Int
+  status       StageStatus              @default(PENDING)
+  assignedToId String?
+  startedAt    DateTime?
+  completedAt  DateTime?
+  dueDate      DateTime?
+  notes        String?
+  authorNotes  String?
+  fileLink     String?                  // Link to file for review (Drive, Dropbox, etc.)
+  isLocked     Boolean                  @default(false) // Lock stage after author approval
+  isVisible    Boolean                  @default(false) // Visibility control for stage
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+  assignedTo   User?                    @relation("AssignedTeamMember", fields: [assignedToId], references: [id])
+  book         Book                     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  history      PublishingStageHistory[]
+  queries      Query[]
+  files        StageFile[]
+
+  @@unique([bookId, stageType])
+  @@index([bookId])
+  @@index([status])
+  @@index([assignedToId])
+}
+
+model PublishingStageHistory {
+  id          String          @id @default(uuid())
+  stageId     String
+  action      String
+  fromStatus  StageStatus?
+  toStatus    StageStatus?
+  fromUserId  String?
+  toUserId    String?
+  notes       String?
+  changedById String
+  createdAt   DateTime        @default(now())
+  changedBy   User            @relation("StageHistoryChangedBy", fields: [changedById], references: [id])
+  stage       PublishingStage @relation(fields: [stageId], references: [id], onDelete: Cascade)
+
+  @@index([stageId])
+  @@index([changedById])
+}
+
+model StageFile {
+  id         String          @id @default(uuid())
+  stageId    String
+  fileName   String
+  fileUrl    String
+  fileType   String?
+  fileSize   Int?
+  uploadedBy String
+  isApproved Boolean         @default(false)
+  approvedAt DateTime?
+  approvedBy String?
+  notes      String?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  stage      PublishingStage @relation(fields: [stageId], references: [id], onDelete: Cascade)
+
+  @@index([stageId])
+}
+
+model Query {
+  id           String           @id @default(uuid())
+  authorId     String
+  bookId       String?
+  stageId      String?
+  assignedToId String?
+  type         QueryType        @default(GENERAL)
+  priority     QueryPriority    @default(MEDIUM)
+  status       QueryStatus      @default(OPEN)
+  subject      String
+  description  String
+  resolution   String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  resolvedAt   DateTime?
+  assignedTo   User?            @relation("AssignedTo", fields: [assignedToId], references: [id])
+  author       User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  book         Book?            @relation(fields: [bookId], references: [id])
+  stage        PublishingStage? @relation(fields: [stageId], references: [id])
+  comments     QueryComment[]
+
+  @@index([authorId])
+  @@index([bookId])
+  @@index([status])
+  @@index([assignedToId])
+}
+
+model QueryComment {
+  id         String   @id @default(uuid())
+  queryId    String
+  userId     String
+  userName   String
+  userRole   UserRole
+  comment    String
+  isInternal Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  query      Query    @relation(fields: [queryId], references: [id], onDelete: Cascade)
+
+  @@index([queryId])
+}
+
+// Stage Template System - Admin-defined default stages
+model StageTemplate {
+  id          String    @id @default(uuid())
+  stageType   StageType @unique
+  name        String    // Display name
+  description String?
+  isDefault   Boolean   @default(false) // Whether this stage is enabled by default for new books
+  sortOrder   Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Order {
+  id                String              @id @default(uuid())
+  userId            String
+  orderNumber       String              @unique
+  totalAmount       Float
+  currency          String              @default("INR")
+  status            OrderStatus         @default(PENDING)
+  currentStageId    String?
+  shippingName      String
+  shippingEmail     String
+  shippingPhone     String
+  shippingAddress   String
+  shippingCity      String
+  shippingState     String
+  shippingZipCode   String
+  shippingCountry   String              @default("India")
+  razorpayOrderId   String?
+  razorpayPaymentId String?
+  razorpaySignature String?
+  paymentMethod     String?
+  paidAt            DateTime?
+  shippedAt         DateTime?
+  deliveredAt       DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  currentStage      OrderStage?         @relation("CurrentOrderStage", fields: [currentStageId], references: [id])
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items             OrderItem[]
+  stageHistory      OrderStageHistory[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([razorpayOrderId])
+  @@index([currentStageId])
+}
+
+model OrderItem {
+  id         String  @id @default(uuid())
+  orderId    String
+  bookId     String
+  quantity   Int
+  unitPrice  Float
+  totalPrice Float
+  format     String?
+  book       Book    @relation(fields: [bookId], references: [id])
+  order      Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([bookId])
+}
+
+model OrderStage {
+  id           String              @id @default(uuid())
+  name         String
+  description  String?
+  color        String?
+  sortOrder    Int                 @default(0)
+  isActive     Boolean             @default(true)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  orders       Order[]             @relation("CurrentOrderStage")
+  stageHistory OrderStageHistory[]
+
+  @@index([sortOrder])
+}
+
+model OrderStageHistory {
+  id        String     @id @default(uuid())
+  orderId   String
+  stageId   String
+  movedById String?
+  notes     String?
+  movedAt   DateTime   @default(now())
+  order     Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  stage     OrderStage @relation(fields: [stageId], references: [id])
+
+  @@index([orderId])
+  @@index([movedAt])
+}
+
+model Royalty {
+  id          String        @id @default(uuid())
+  authorId    String
+  authorUid   String?
+  bookId      String
+  orderId     String?
+  saleId      String?
+  amount      Float
+  royaltyRate Float         @default(0.10)
+  saleAmount  Float
+  quantity    Int           @default(1)
+  bucket      RoyaltyBucket @default(ECOMMERCE)
+  platform    String?
+  isPaid      Boolean       @default(false)
+  paidAt      DateTime?
+  paymentRef  String?
+  period      String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  author      User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  book        Book          @relation(fields: [bookId], references: [id])
+
+  @@index([authorId])
+  @@index([authorUid])
+  @@index([bookId])
+  @@index([period])
+  @@index([isPaid])
+  @@index([bucket])
+}
+
+// Book Royalty Configuration - AMOUNT per unit per platform
+model BookRoyaltyConfig {
+  id           String   @id @default(uuid())
+  bookId       String
+  platform     String   // WEBSITE, EBOOK, ECOMMERCE, AMAZON, FLIPKART, etc.
+  royaltyAmount Float   // Fixed amount per unit sold (e.g., ₹42)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  book         Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([bookId, platform])
+  @@index([bookId])
+  @@index([platform])
+}
+
+model Sale {
+  id            String   @id @default(uuid())
+  bookId        String
+  isbnUsed      String?
+  platform      String
+  quantity      Int      @default(1)
+  unitPrice     Float
+  totalAmount   Float
+  currency      String   @default("INR")
+  saleDate      DateTime
+  importSource  String?
+  importBatchId String?
+  rawData       Json?
+  createdAt     DateTime @default(now())
+  book          Book     @relation(fields: [bookId], references: [id])
+
+  @@index([bookId])
+  @@index([isbnUsed])
+  @@index([platform])
+  @@index([saleDate])
+  @@index([importBatchId])
+}
+
+model Lead {
+  id                String             @id @default(uuid())
+  name              String
+  email             String
+  alternateEmail    String?
+  phone             String?
+  alternatePhone    String?
+  source            LeadSource         @default(WEBSITE)
+  status            LeadStatus         @default(NEW)
+  assignedToId      String?
+  salesPersonId     String?
+  createdById       String?
+  interestArea      String?
+  budget            Float?
+  contractAmount    Float?
+  followUpDate      DateTime?
+  deadline          DateTime?
+  deadlineSeverity  DeadlineSeverity?
+  currentStageId    String?
+  convertedAt       DateTime?
+  convertedToUserId String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  assignedTo        User?              @relation("AssignedTo", fields: [assignedToId], references: [id])
+  createdBy         User?              @relation("CreatedBy", fields: [createdById], references: [id])
+  currentStage      LeadStage?         @relation("CurrentStage", fields: [currentStageId], references: [id])
+  salesPerson       User?              @relation("SalesAssignment", fields: [salesPersonId], references: [id])
+  activities        LeadActivity[]
+  notes             LeadNote[]
+  stageHistory      LeadStageHistory[]
+
+  @@index([status])
+  @@index([assignedToId])
+  @@index([salesPersonId])
+  @@index([email])
+  @@index([currentStageId])
+  @@index([deadline])
+}
+
+model LeadStage {
+  id           String             @id @default(uuid())
+  name         String
+  description  String?
+  color        String?
+  sortOrder    Int                @default(0)
+  isActive     Boolean            @default(true)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  leads        Lead[]             @relation("CurrentStage")
+  stageHistory LeadStageHistory[]
+
+  @@index([sortOrder])
+}
+
+model LeadStageHistory {
+  id        String    @id @default(uuid())
+  leadId    String
+  stageId   String
+  movedById String?
+  notes     String?
+  movedAt   DateTime  @default(now())
+  lead      Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  stage     LeadStage @relation(fields: [stageId], references: [id])
+
+  @@index([leadId])
+  @@index([movedAt])
+}
+
+model LeadNote {
+  id        String   @id @default(uuid())
+  leadId    String
+  content   String
+  createdBy String
+  createdAt DateTime @default(now())
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([createdAt])
+}
+
+model LeadActivity {
+  id        String   @id @default(uuid())
+  leadId    String
+  type      String
+  notes     String
+  createdBy String
+  createdAt DateTime @default(now())
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType @default(GENERAL)
+  title     String
+  message   String
+  link      String?
+  isRead    Boolean          @default(false)
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+}
+
+model PublishingPackage {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  price       Float
+  features    Json
+  isActive    Boolean  @default(true)
+  isPopular   Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+model BlogPost {
+  id           String        @id @default(uuid())
+  title        String
+  slug         String        @unique
+  content      String
+  excerpt      String?
+  coverImage   String?
+  authorName   String
+  authorId     String?
+  category     String?
+  tags         Json?
+  isPublished  Boolean       @default(false)
+  publishedAt  DateTime?
+  seoTitle     String?
+  seoDesc      String?
+  views        Int           @default(0)
+  linkedBookId String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  comments     BlogComment[]
+  likes        BlogLike[]
+
+  @@index([slug])
+  @@index([isPublished])
+  @@index([authorId])
+}
+
+model SiteContent {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  title     String?
+  content   Json
+  isActive  Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+}
+
+model SiteSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     Json
+  category  String?
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+  @@index([category])
+}
+
+model Category {
+  id          String         @id @default(uuid())
+  name        String
+  slug        String         @unique
+  description String?
+  parentId    String?
+  isActive    Boolean        @default(true)
+  sortOrder   Int            @default(0)
+  seoTitle    String?
+  seoDesc     String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  books       BookCategory[]
+  parent      Category?      @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    Category[]     @relation("CategoryHierarchy")
+
+  @@index([slug])
+  @@index([isActive])
+}
+
+model BookCategory {
+  id         String   @id @default(uuid())
+  bookId     String
+  categoryId String
+  book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([bookId, categoryId])
+}
+
+model ServiceAddOn {
+  id           String   @id @default(uuid())
+  serviceType  String
+  name         String
+  description  String?
+  basePrice    Float
+  pricingType  String   @default("fixed")
+  pricingTiers Json?
+  isActive     Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([serviceType])
+  @@index([isActive])
+}
+
+model Discount {
+  id            String    @id @default(uuid())
+  name          String
+  code          String?   @unique
+  discountType  String    @default("percentage")
+  discountValue Float
+  appliesTo     String
+  targetIds     Json?
+  minPurchase   Float?
+  maxUses       Int?
+  usedCount     Int       @default(0)
+  startsAt      DateTime?
+  expiresAt     DateTime?
+  showTimer     Boolean   @default(false)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([code])
+  @@index([isActive])
+  @@index([appliesTo])
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  bookId     String?
+  authorName String
+  bookTitle  String?
+  rating     Int
+  content    String
+  source     String?
+  isVerified Boolean  @default(false)
+  isApproved Boolean  @default(true)
+  isFeatured Boolean  @default(false)
+  displayOn  Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  book       Book?    @relation(fields: [bookId], references: [id])
+
+  @@index([bookId])
+  @@index([isApproved])
+  @@index([isFeatured])
+}
+
+model AnthologySubmission {
+  id                String   @id @default(uuid())
+  name              String
+  phone             String
+  isWhatsApp        Boolean  @default(true)
+  whatsAppNumber    String?
+  email             String
+  instagramUsername String?
+  poetryTitle       String
+  poetryContent     String
+  bio               String?
+  contactPreference String
+  googleSheetSynced Boolean  @default(false)
+  createdAt         DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([googleSheetSynced])
+}
+
+model GuestPost {
+  id           String    @id @default(uuid())
+  title        String
+  content      String
+  writerName   String
+  email        String
+  phone        String?
+  socialLinks  Json?
+  status       String    @default("pending")
+  reviewedBy   String?
+  reviewedAt   DateTime?
+  rejectReason String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([status])
+  @@index([email])
+}
+
+model BlogComment {
+  id          String   @id @default(uuid())
+  postId      String
+  authorName  String
+  authorEmail String?
+  content     String
+  isApproved  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  post        BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([isApproved])
+}
+
+model BlogLike {
+  id        String   @id @default(uuid())
+  postId    String
+  visitorId String
+  createdAt DateTime @default(now())
+  post      BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, visitorId])
+}
+
+model ServiceEnrollment {
+  id                String    @id @default(uuid())
+  userId            String?
+  serviceType       String
+  status            String    @default("pending")
+  name              String
+  email             String
+  phone             String
+  amount            Float
+  discountCode      String?
+  discountAmount    Float?
+  finalAmount       Float
+  razorpayOrderId   String?
+  razorpayPaymentId String?
+  paidAt            DateTime?
+  addOns            Json?
+  metadata          Json?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  user              User?     @relation(fields: [userId], references: [id])
+
+  @@index([serviceType])
+  @@index([status])
+  @@index([email])
+}
+
+model WritingChallenge {
+  id           String                 @id @default(uuid())
+  name         String
+  description  String?
+  startDate    DateTime
+  endDate      DateTime
+  fee          Float
+  discountFee  Float?
+  isActive     Boolean                @default(true)
+  rules        Json?
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+  participants ChallengeParticipant[]
+  prompts      ChallengePrompt[]
+}
+
+model ChallengeParticipant {
+  id              String                @id @default(uuid())
+  challengeId     String
+  userId          String?
+  enrollmentId    String?
+  name            String
+  email           String
+  status          String                @default("active")
+  submissionCount Int                   @default(0)
+  certificateUrl  String?
+  completedAt     DateTime?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  challenge       WritingChallenge      @relation(fields: [challengeId], references: [id])
+  submissions     ChallengeSubmission[]
+
+  @@index([challengeId])
+  @@index([email])
+}
+
+model ChallengePrompt {
+  id          String                @id @default(uuid())
+  challengeId String
+  dayNumber   Int
+  title       String
+  content     String
+  releaseDate DateTime
+  createdAt   DateTime              @default(now())
+  challenge   WritingChallenge      @relation(fields: [challengeId], references: [id])
+  submissions ChallengeSubmission[]
+
+  @@unique([challengeId, dayNumber])
+}
+
+model ChallengeSubmission {
+  id            String               @id @default(uuid())
+  participantId String
+  promptId      String?
+  title         String
+  content       String
+  type          String
+  isDraft       Boolean              @default(true)
+  submittedAt   DateTime?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  participant   ChallengeParticipant @relation(fields: [participantId], references: [id])
+  prompt        ChallengePrompt?     @relation(fields: [promptId], references: [id])
+
+  @@index([participantId])
+}
+
+model EmailTemplate {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  subject     String
+  htmlContent String
+  textContent String?
+  variables   Json?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model EmailLog {
+  id         String    @id @default(uuid())
+  to         String
+  from       String?
+  subject    String
+  templateId String?
+  status     String
+  provider   String?
+  messageId  String?
+  error      String?
+  sentAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([to])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model BookExternalLink {
+  id        String   @id @default(uuid())
+  bookId    String
+  platform  String
+  url       String
+  createdAt DateTime @default(now())
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([bookId, platform])
+}
+
+model ImportBatch {
+  id           String    @id @default(uuid())
+  type         String
+  fileName     String?
+  totalRows    Int       @default(0)
+  successCount Int       @default(0)
+  errorCount   Int       @default(0)
+  status       String    @default("pending")
+  importedById String
+  errors       Json?
+  summary      Json?
+  createdAt    DateTime  @default(now())
+  completedAt  DateTime?
+
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model AuthorUidSequence {
+  id        String   @id @default("singleton")
+  lastValue Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+enum UserRole {
+  AUTHOR
+  TEAM
+  ADMIN
+}
+
+enum BookStatus {
+  DRAFT
+  IN_PROGRESS
+  UNDER_REVIEW
+  FORMATTING
+  PUBLISHED
+  ON_HOLD
+}
+
+enum ManuscriptStatus {
+  UPLOADED
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  FORMATTING
+  FORMATTED
+}
+
+enum StageType {
+  MANUSCRIPT_RECEIVED
+  INITIAL_REVIEW
+  EDITING
+  PROOFREADING
+  COVER_DESIGN
+  INTERIOR_FORMATTING
+  FINAL_REVIEW
+  ISBN_ASSIGNMENT
+  PRINTING
+  DISTRIBUTION
+  COMPLETED
+}
+
+enum StageStatus {
+  PENDING
+  IN_PROGRESS
+  AWAITING_APPROVAL
+  APPROVED
+  QUERY_RAISED
+  COMPLETED
+  SKIPPED
+}
+
+enum QueryType {
+  STAGE_SPECIFIC
+  GENERAL
+  PAYMENT
+  TECHNICAL
+  CONTENT
+  OTHER
+}
+
+enum QueryStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_RESPONSE
+  RESOLVED
+  CLOSED
+}
+
+enum QueryPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum OrderStatus {
+  PENDING
+  PAYMENT_PENDING
+  PAYMENT_FAILED
+  PAID
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum RoyaltyBucket {
+  WEBSITE
+  EBOOK
+  ECOMMERCE
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  INTERESTED
+  NEGOTIATING
+  CONVERTED
+  LOST
+  ON_HOLD
+}
+
+enum LeadSource {
+  WEBSITE
+  REFERRAL
+  SOCIAL_MEDIA
+  ADVERTISEMENT
+  EVENT
+  DIRECT
+  OTHER
+}
+
+enum DeadlineSeverity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum NotificationType {
+  STAGE_UPDATE
+  QUERY_RESPONSE
+  PAYMENT_RECEIVED
+  ORDER_STATUS
+  ROYALTY_PAYMENT
+  SYSTEM
+  GENERAL
+}
