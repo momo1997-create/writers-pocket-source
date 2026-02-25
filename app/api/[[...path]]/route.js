@@ -2005,13 +2005,33 @@ export async function POST(request, context) {
       return NextResponse.json({ user, message: 'Registration successful' });
     }
 
-    // Create book
+    // Create book (Page 1 minimal creation)
     if (path === '/books') {
-      const { title, subtitle, authorId, description, category, genre } = body;
+      const {
+        title,
+        subtitle,
+        penName,
+        language,
+        authorId,
+        categoryId,
+        genre,
+        sizeId
+      } = body;
 
-      if (!title || !authorId) {
+      if (!title || !authorId || !categoryId || !sizeId || !language) {
         return NextResponse.json(
-          { error: 'Title and author ID are required' },
+          { error: 'Missing required fields' },
+          { status: 400 }
+        );
+      }
+
+      const category = await prisma.category.findUnique({
+        where: { id: categoryId },
+      });
+
+      if (!category) {
+        return NextResponse.json(
+          { error: 'Invalid category' },
           { status: 400 }
         );
       }
@@ -2020,11 +2040,14 @@ export async function POST(request, context) {
       const book = await prisma.book.create({
         data: {
           title,
-          subtitle,
+          subtitle: subtitle || null,
+          penName: penName || null,
+          language,
           authorId,
-          description,
-          category,
+          categoryId,
           genre,
+          formatterGroup: category.formatterGroup,
+          sizeId,
           status: 'DRAFT',
           publishingStages: {
             create: PUBLISHING_STAGES.map((stage) => ({

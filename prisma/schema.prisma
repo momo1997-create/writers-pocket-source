@@ -6,6 +6,13 @@ datasource db {
   provider = "postgresql"
 }
 
+enum FormatterGroup {
+  POETRY
+  NOVEL
+  SHAYARI_QUOTES
+  NON_FICTION
+}
+
 model User {
   id                  String                   @id @default(uuid())
   authorUid           String?                  @unique
@@ -62,6 +69,17 @@ model BankDetails {
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+model Size {
+  id      String  @id @default(uuid())
+  label   String
+  width   Float
+  height  Float
+  unit    String
+  active  Boolean @default(true)
+
+  books   Book[]
+}
+
 model Book {
   id               String             @id @default(uuid())
   title            String
@@ -99,6 +117,10 @@ model Book {
   salesCount       Int                @default(0)
   importSource     String?
   metadata         Json?
+  language        String
+  formatterGroup  FormatterGroup
+  sizeId          String
+  size    Size   @relation(fields: [sizeId], references: [id])
   // Store display overrides (only shown on storefront)
   storeDisplayTitle       String?
   storeDisplayAuthor      String?
@@ -616,20 +638,25 @@ model SiteSetting {
 }
 
 model Category {
-  id          String         @id @default(uuid())
-  name        String
-  slug        String         @unique
-  description String?
-  parentId    String?
-  isActive    Boolean        @default(true)
-  sortOrder   Int            @default(0)
-  seoTitle    String?
-  seoDesc     String?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  books       BookCategory[]
-  parent      Category?      @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children    Category[]     @relation("CategoryHierarchy")
+  id             String         @id @default(uuid())
+  name           String
+  slug           String         @unique
+  description    String?
+  parentId       String?
+  isActive       Boolean        @default(true)
+  sortOrder      Int            @default(0)
+  seoTitle       String?
+  seoDesc        String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  // 🔴 NEW (REQUIRED)
+  formatterGroup FormatterGroup
+
+  // Relations
+  books          BookCategory[]
+  parent         Category?      @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children       Category[]     @relation("CategoryHierarchy")
 
   @@index([slug])
   @@index([isActive])

@@ -1,14 +1,14 @@
+
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Upload, Loader2 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ArrowLeft, Loader2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -18,49 +18,59 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 
+const LANGUAGES = [
+  'English',
+  'Hindi',
+  'Gujarati',
+  'Marathi',
+  'Punjabi',
+  'Tamil',
+  'Telugu',
+  'Malayalam',
+  'Bengali',
+  'Urdu',
+  'Sanskrit',
+  'Kannada',
+  'Odia',
+];
+
 export default function NewBookPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+
+  const [categories, setCategories] = useState([]);
+  const [sizes, setSizes] = useState([]);
+
   const [formData, setFormData] = useState({
     title: '',
     subtitle: '',
-    description: '',
-    category: '',
+    penName: '',
+    language: '',
+    categoryId: '',
     genre: '',
+    sizeId: '',
   });
 
-  const categories = [
-    'Fiction',
-    'Non-Fiction',
-    'Poetry',
-    'Biography',
-    'Self-Help',
-    'Business',
-    'Children',
-    'Academic',
-    'Other',
-  ];
+  useEffect(() => {
+    fetch('/api/categories')
+      .then(res => res.json())
+      .then(data => setCategories(data.categories || []));
 
-  const genres = {
-    Fiction: ['Romance', 'Mystery', 'Thriller', 'Science Fiction', 'Fantasy', 'Literary Fiction', 'Historical'],
-    'Non-Fiction': ['Memoir', 'History', 'Science', 'Philosophy', 'Travel', 'True Crime'],
-    Poetry: ['Contemporary', 'Classic', 'Haiku', 'Free Verse'],
-    Biography: ['Autobiography', 'Memoir', 'Historical Figure'],
-    'Self-Help': ['Personal Development', 'Relationships', 'Health & Wellness', 'Productivity'],
-    Business: ['Entrepreneurship', 'Leadership', 'Marketing', 'Finance'],
-    Children: ['Picture Book', 'Middle Grade', 'Young Adult'],
-    Academic: ['Textbook', 'Research', 'Reference'],
-    Other: ['Anthology', 'Essay Collection', 'Other'],
-  };
+    fetch('/api/sizes')
+      .then(res => res.json())
+      .then(data => setSizes(data.sizes || []));
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.title.trim()) {
+    const { title, language, categoryId, genre, sizeId } = formData;
+
+    if (!title || !language || !categoryId || !genre || !sizeId) {
       toast({
-        title: 'Title Required',
-        description: 'Please enter a title for your book.',
+        title: 'Missing fields',
+        description: 'Please fill all required fields.',
         variant: 'destructive',
       });
       return;
@@ -92,11 +102,11 @@ export default function NewBookPage() {
       }
 
       toast({
-        title: 'Book Created!',
-        description: 'Your book has been created. Now upload your manuscript to get started.',
+        title: 'Book Created',
+        description: 'Proceed to formatter to add your manuscript.',
       });
 
-      router.push(`/author/books/${data.book.id}`);
+      router.push(`/author/books/${data.book.id}/formatter`);
     } catch (error) {
       toast({
         title: 'Error',
@@ -109,138 +119,87 @@ export default function NewBookPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href="/author/books">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Create New Book</h1>
-          <p className="text-muted-foreground">Start your publishing journey</p>
-        </div>
-      </div>
+    <div className="max-w-3xl mx-auto py-8">
+      <Link href="/author/books" className="flex items-center text-sm mb-6">
+        <ArrowLeft className="w-4 h-4 mr-2" /> Back to Books
+      </Link>
 
-      {/* Form */}
       <Card>
         <CardHeader>
-          <CardTitle>Book Details</CardTitle>
-          <CardDescription>
-            Enter the basic information about your book. You can update these details later.
-          </CardDescription>
+          <CardTitle>Create New Book</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="title">Book Title *</Label>
-              <Input
-                id="title"
-                placeholder="Enter your book title"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                required
-              />
+          <form onSubmit={handleSubmit} className="space-y-4">
+
+            <div>
+              <Label>Book Title *</Label>
+              <Input value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="subtitle">Subtitle</Label>
-              <Input
-                id="subtitle"
-                placeholder="Enter a subtitle (optional)"
-                value={formData.subtitle}
-                onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })}
-              />
+            <div>
+              <Label>Subtitle</Label>
+              <Input value={formData.subtitle} onChange={e => setFormData({ ...formData, subtitle: e.target.value })} />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Category</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value) => setFormData({ ...formData, category: value, genre: '' })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat} value={cat}>
-                        {cat}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Genre</Label>
-                <Select
-                  value={formData.genre}
-                  onValueChange={(value) => setFormData({ ...formData, genre: value })}
-                  disabled={!formData.category}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select genre" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {formData.category &&
-                      genres[formData.category]?.map((genre) => (
-                        <SelectItem key={genre} value={genre}>
-                          {genre}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div>
+              <Label>Pen Name</Label>
+              <Input value={formData.penName} onChange={e => setFormData({ ...formData, penName: e.target.value })} />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="description">Book Description</Label>
-              <Textarea
-                id="description"
-                placeholder="Write a brief description of your book..."
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={4}
-              />
-              <p className="text-xs text-muted-foreground">
-                This description will appear on your book's page and in search results.
-              </p>
+            <div>
+              <Label>Language *</Label>
+
+              <Select
+                value={formData.language || undefined}
+                onValueChange={(v) =>
+                  setFormData({ ...formData, language: v })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select language" />
+                </SelectTrigger>
+
+                <SelectContent>
+                  {LANGUAGES.map((l) => (
+                    <SelectItem key={l} value={l}>
+                      {l}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            <div className="flex gap-4 pt-4">
-              <Link href="/author/books" className="flex-1">
-                <Button type="button" variant="outline" className="w-full">
-                  Cancel
-                </Button>
-              </Link>
-              <Button type="submit" className="flex-1" disabled={loading}>
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  'Create Book'
-                )}
-              </Button>
+            <div>
+              <Label>Category *</Label>
+              <Select onValueChange={v => setFormData({ ...formData, categoryId: v })}>
+                <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                <SelectContent>
+                  {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
+
+            <div>
+              <Label>Genre *</Label>
+              <Input value={formData.genre} onChange={e => setFormData({ ...formData, genre: e.target.value })} />
+            </div>
+
+            <div>
+              <Label>Size *</Label>
+              <Select onValueChange={v => setFormData({ ...formData, sizeId: v })}>
+                <SelectTrigger><SelectValue placeholder="Select size" /></SelectTrigger>
+                <SelectContent>
+                  {sizes.map(s => <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button type="submit" disabled={loading}>
+              {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Create Book
+            </Button>
+
           </form>
-        </CardContent>
-      </Card>
-
-      {/* Info Card */}
-      <Card className="bg-muted/50">
-        <CardContent className="p-4">
-          <h4 className="font-medium mb-2">What happens next?</h4>
-          <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
-            <li>After creating your book, upload your manuscript</li>
-            <li>Our team will review and guide you through publishing stages</li>
-            <li>Track progress, approve stages, and raise queries anytime</li>
-            <li>Your book gets published and listed in our shop!</li>
-          </ol>
         </CardContent>
       </Card>
     </div>
